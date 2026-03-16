@@ -1,0 +1,12 @@
+# 소스코드는 LF로 통일
+*.java    text eol=lf
+*.yml     text eol=lf
+*.xml     text eol=lf
+*.conf    text eol=lf
+*.json    text eol=lf
+*.sh      text eol=lf
+*.md      text eol=lf
+
+# 로그/바이너리는 git이 건드리지 않음
+*.log     binary
+*.jar     binary

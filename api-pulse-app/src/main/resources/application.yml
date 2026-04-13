@@ -55,6 +55,8 @@ slack:
   webhook-url:
 
 anomaly:
+  es-url: http://localhost:9200
+  index-pattern: api-pulse-*
   detection:
     z-score-threshold: 2.0
     interval-ms: 30000

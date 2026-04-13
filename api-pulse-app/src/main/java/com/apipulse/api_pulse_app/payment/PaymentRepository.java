@@ -7,5 +7,6 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
     List<PaymentEntity> findTop10ByOrderByCreatedAtDesc();
     List<PaymentEntity> findByStatus(PaymentEntity.PaymentStatus status);
     List<PaymentEntity> findTop20ByOrderByCreatedAtDesc();
-
+    List<PaymentEntity> findByStatusOrderByCreatedAtDesc(PaymentEntity.PaymentStatus status);
+    List<PaymentEntity> findTop3ByStatusOrderByCreatedAtDesc(PaymentEntity.PaymentStatus status);
 }

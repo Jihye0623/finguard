@@ -4,10 +4,14 @@ import com.apipulse.api_pulse_app.agent.AgentController;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +26,9 @@ public class AnomalyDetectionService {
 
     @Value("${anomaly.es-url:http://localhost:9200}")
     private String esUrl;
+
+    @Value("${anomaly.index-pattern:api-pulse-*}")
+    private String indexPattern;
 
     @Value("${anomaly.detection.z-score-threshold:2.0}")
     private double zScoreThreshold;
@@ -137,7 +144,7 @@ public class AnomalyDetectionService {
                   "aggs": {
                     "total": { "value_count": { "field": "statusCode" } },
                     "errors": {
-                      "filter": { "term": { "is_error": "true" } }
+                      "filter": { "match": { "is_error": "true" } }
                     }
                   }
                 }
@@ -145,11 +152,18 @@ public class AnomalyDetectionService {
             }
             """;
 
-        Map<String, Object> response = restTemplate.postForObject(
-                esUrl + "/finguard-*/_search",
-                query,
+        // 수정 후 — Content-Type 추가
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(query, headers);
+
+        ResponseEntity<Map> responseEntity = restTemplate.exchange(
+                esUrl + "/" + indexPattern + "/_search",
+                HttpMethod.POST,
+                entity,
                 Map.class
         );
+        Map<String, Object> response = responseEntity.getBody();
 
         List<Double> errorRates = new ArrayList<>();
 

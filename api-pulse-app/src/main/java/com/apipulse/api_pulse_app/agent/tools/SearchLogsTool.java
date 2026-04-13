@@ -2,6 +2,11 @@ package com.apipulse.api_pulse_app.agent.tools;
 
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -13,6 +18,14 @@ public class SearchLogsTool {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final String ES_URL = "http://localhost:9200";
+    private final String ES_INDEX = "api-pulse-*";
+
+    // 공통 헤더 생성 메서드
+    private HttpEntity<String> buildRequest(String query) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new HttpEntity<>(query, headers);
+    }
 
     @Tool("Elasticsearch에서 최근 에러 로그를 검색합니다. 장애 원인 파악에 사용하세요.")
     public String searchErrorLogs(String keyword) {
@@ -33,13 +46,14 @@ public class SearchLogsTool {
                 }
                 """.formatted(keyword);
 
-            var response = restTemplate.postForObject(
-                    ES_URL + "/finguard-*/_search",
-                    Map.of("source", query),
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    ES_URL + "/" + ES_INDEX + "/_search",
+                    HttpMethod.POST,
+                    buildRequest(query),
                     Map.class
             );
 
-            return response != null ? response.toString() : "로그 없음";
+            return response.getBody() != null ? response.getBody().toString() : "로그 없음";
         } catch (Exception e) {
             log.error("[Tool] SearchLogs 실패: {}", e.getMessage());
             return "로그 검색 실패: " + e.getMessage();
@@ -64,14 +78,16 @@ public class SearchLogsTool {
                 }
                 """.formatted(minutes);
 
-            var response = restTemplate.postForObject(
-                    ES_URL + "/finguard-*/_search",
-                    Map.of("source", query),
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    ES_URL + "/" + ES_INDEX + "/_search",
+                    HttpMethod.POST,
+                    buildRequest(query),
                     Map.class
             );
 
-            return response != null ? response.toString() : "에러 없음";
+            return response.getBody() != null ? response.getBody().toString() : "에러 없음";
         } catch (Exception e) {
+            log.error("[Tool] 최근 에러 조회 실패: {}", e.getMessage());
             return "조회 실패: " + e.getMessage();
         }
     }

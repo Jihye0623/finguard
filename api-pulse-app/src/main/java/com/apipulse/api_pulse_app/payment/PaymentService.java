@@ -1,5 +1,6 @@
 package com.apipulse.api_pulse_app.payment;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import java.util.Random;
 
 @Slf4j
 @Service
+@Getter
 @RequiredArgsConstructor
 public class PaymentService {
 
@@ -94,4 +96,38 @@ public class PaymentService {
         if (cardNumber == null || cardNumber.length() < 4) return "****";
         return "**** **** **** " + cardNumber.substring(cardNumber.length() - 4);
     }
+
+    public RetryResult retryFailedPayments() {
+        List<PaymentEntity> failedPayments =
+                paymentRepository.findTop3ByStatusOrderByCreatedAtDesc(
+                        PaymentEntity.PaymentStatus.FAILED
+                );
+
+        if (failedPayments.isEmpty()) {
+            return new RetryResult(0, 0, "재시도할 실패 결제 없음");
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+
+        for (PaymentEntity payment : failedPayments) {
+            try {
+                payment.setStatus(PaymentEntity.PaymentStatus.APPROVED);
+                payment.setFailReason(null);
+                paymentRepository.save(payment);
+                successCount++;
+                log.info("[Retry] 결제 재시도 성공 - paymentId: {}", payment.getId());
+            } catch (Exception e) {
+                failCount++;
+                log.warn("[Retry] 결제 재시도 실패 - paymentId: {}, reason: {}",
+                        payment.getId(), e.getMessage());
+            }
+        }
+
+        return new RetryResult(successCount, failCount,
+                String.format("재시도 완료 - 성공: %d건, 실패: %d건", successCount, failCount));
+    }
+
+    // RetryResult를 PaymentService 안에 inner record로 추가
+    public record RetryResult(int successCount, int failCount, String message) {}
 }
